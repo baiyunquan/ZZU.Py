@@ -9,6 +9,7 @@ from urllib.parse import urlparse, parse_qs
 
 import gmalg
 import httpx2
+from pydantic import ValidationError
 
 from zzupy.aio.app.interfaces import ICASClient
 from zzupy.exception import (
@@ -24,6 +25,7 @@ from zzupy.logging import (
     log_http_response_body,
     logger,
 )
+from zzupy.model.ecard import ECardAccountModel
 from zzupy.utils import sm4_decrypt_ecb, require_auth
 
 
@@ -699,17 +701,12 @@ class ECardClient:
             )
 
             response_data = response.json()
+            account_data = ECardAccountModel.model_validate(response_data)
+            remaining_energy = account_data.remaining_energy
 
-            if "resultData" not in response_data:
-                logger.error("响应中缺少 resultData")
-                raise ParsingError("服务器响应格式不正确")
+            if remaining_energy is None:
+                raise ParsingError("服务器响应数据不完整，无法找到剩余电量 quantity")
 
-            template_list = response_data["resultData"].get("templateList", [])
-            if len(template_list) < 4:
-                logger.error("templateList 数据不完整")
-                raise ParsingError("服务器响应数据不完整")
-
-            remaining_energy = float(template_list[3]["value"])
             logger.info("房间 {} 剩余电量: {} 度", room, remaining_energy)
             return remaining_energy
 
@@ -726,6 +723,7 @@ class ECardClient:
             IndexError,
             TypeError,
             ValueError,
+            ValidationError,
         ) as exc:
             logger.error("从剩余电量响应中提取数据失败: {}", exc)
             raise ParsingError.from_exception(
