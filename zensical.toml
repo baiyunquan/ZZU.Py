@@ -27,6 +27,16 @@ nav = [
     { "API" = "reference/api.md" },
 ]
 
+[project.theme]
+features = [
+    "navigation.path",
+    "navigation.prune",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.instant.progress",
+    "search.highlight"
+]
+
 [project.markdown_extensions.abbr]
 
 [project.markdown_extensions.admonition]
